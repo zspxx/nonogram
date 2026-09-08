@@ -130,6 +130,48 @@ then **Commit changes**. On the command line: `git add .`, `git commit -m "..."`
 `git push`. Your live site refreshes within a minute or so — you may need a hard
 reload (`Ctrl`/`Cmd` + `Shift` + `R`) to get past your browser's cache.
 
+### Getting a clean URL without your username
+
+The default Pages address contains your username
+(`https://YOUR-USERNAME.github.io/nonogram/`). There are two ways around that.
+
+**Option A — a GitHub organization (free, no purchase, no DNS).**
+A repository named `<name>.github.io` inside an organization called `<name>` is
+served at `https://<name>.github.io/` — your personal username appears nowhere
+in the address.
+
+1. Go to [github.com/organizations/plan](https://github.com/organizations/plan)
+   and choose the **Free** plan.
+2. Name the organization after the game, e.g. `playnonogram`.
+3. Inside that organization, create a repository named exactly
+   `playnonogram.github.io` (organization name + `.github.io`).
+4. Upload the files and enable Pages exactly as in Steps 2–3 above.
+5. Your site is `https://playnonogram.github.io/`.
+
+**Option B — your own domain (costs money, ~$10–40/year).**
+
+1. Buy a domain from any registrar (Namecheap, Cloudflare, Porkbun, GoDaddy…).
+2. In your repository: **Settings → Pages → Custom domain**, type the domain,
+   click **Save**. GitHub adds a `CNAME` file to the repository for you.
+3. At your registrar's DNS panel, add these records:
+
+   | Type | Name | Value |
+   |---|---|---|
+   | A | `@` | `185.199.108.153` |
+   | A | `@` | `185.199.109.153` |
+   | A | `@` | `185.199.110.153` |
+   | A | `@` | `185.199.111.153` |
+   | AAAA | `@` | `2606:50c0:8000::153` |
+   | AAAA | `@` | `2606:50c0:8001::153` |
+   | AAAA | `@` | `2606:50c0:8002::153` |
+   | AAAA | `@` | `2606:50c0:8003::153` |
+   | CNAME | `www` | `YOUR-USERNAME.github.io.` (or `<org>.github.io.`) |
+
+   Use the `A`/`AAAA` rows for a bare domain (`example.com`); the `CNAME` row
+   covers `www.example.com`.
+4. DNS can take anywhere from a few minutes to a day to propagate. When the
+   check passes, tick **Enforce HTTPS** in Settings → Pages.
+
 ### You only need one website
 
 You do **not** need a separate site per player. One public address is enough:
