@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A minimalist 7x7 nonogram (picross) puzzle game with an endless sequence of puzzles.">
+<title>Nonogram</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="head">
+      <h1>NONOGRAM</h1>
+      <p class="puzzle-number" id="puzzle-number">Puzzle #1</p>
+    </header>
+
+    <div class="game" id="game">
+      <div class="corner" aria-hidden="true"></div>
+      <div class="col-clues" id="col-clues" aria-hidden="true"></div>
+      <div class="row-clues" id="row-clues" aria-hidden="true"></div>
+      <div class="board" id="board" role="grid" aria-label="Nonogram grid, 7 rows by 7 columns"></div>
+    </div>
+
+    <p class="message" id="message" role="status" aria-live="polite"></p>
+
+    <div class="controls">
+      <div class="modes" role="group" aria-label="Input mode">
+        <button type="button" class="mode-btn is-active" id="mode-fill" aria-pressed="true">Fill</button>
+        <button type="button" class="mode-btn" id="mode-mark" aria-pressed="false">Mark X</button>
+      </div>
+
+      <p class="mistakes" id="mistakes">
+        <span>Mistakes: <span id="mistake-count">0 / 3</span></span>
+        <span class="dots" id="dots" aria-hidden="true"></span>
+      </p>
+
+      <div class="actions">
+        <button type="button" class="btn" id="reset">Reset</button>
+        <button type="button" class="btn btn-primary" id="next" hidden>Next Puzzle</button>
+      </div>
+    </div>
+
+    <p class="hint">Left click fills &middot; right click marks X</p>
+  </main>
+
+  <noscript>
+    <p class="hint">This game needs JavaScript to run. Please enable it and reload the page.</p>
+  </noscript>
+
+  <script src="script.js"></script>
+</body>
+</html>

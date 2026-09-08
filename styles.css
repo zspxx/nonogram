@@ -1,0 +1,400 @@
+/* ==========================================================================
+   Nonogram 7x7 - minimalist black / white / light grey theme
+   ========================================================================== */
+
+:root {
+  --ink: #111111;
+  --muted: #8c8c8c;
+  --faint: #bdbdbd;
+  --line: #c9c9c9;
+  --paper: #ffffff;
+  --cell: clamp(32px, 9.4vw, 44px);
+  --wrap: 500px;
+  /* Width reserved for the row clues, mirrored on the right so the grid
+     itself sits on the page's centre line. */
+  --gutter: calc(var(--cell) * 1.7);
+  /* Bold divider after the 5th row and the 5th column. */
+  --rule: 2px;
+  --tracks: repeat(5, var(--cell)) var(--rule) repeat(2, var(--cell));
+  --gap: 1px;
+  --pad: 1px;
+  --frame: 2px;
+}
+
+/* Roomier board once there is space for it. */
+@media (min-width: 720px) {
+  :root {
+    --cell: 50px;
+    --wrap: 560px;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 26px 12px 44px;
+  display: flex;
+  justify-content: center;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.wrap {
+  width: 100%;
+  max-width: var(--wrap);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* ------------------------------- header --------------------------------- */
+
+.head { text-align: center; }
+
+h1 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  text-indent: 0.4em;
+}
+
+.puzzle-number {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------- board --------------------------------- */
+
+.game {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, var(--gutter));
+  gap: 6px;
+  max-width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Explicit placement: the third column is an empty mirror of the row-clue
+   rail, so the grid itself lands on the page's centre line. */
+.corner     { grid-column: 1; grid-row: 1; }
+.col-clues  { grid-column: 2; grid-row: 1; }
+.row-clues  { grid-column: 1; grid-row: 2; }
+.board      { grid-column: 2; grid-row: 2; }
+
+.col-clues,
+.row-clues {
+  display: grid;
+  gap: var(--gap);
+  border: 0 solid transparent;
+}
+
+/* Each rail copies the board's frame and padding on its own axis only, so it
+   lines up with the cells without adding width the mirror cannot match. */
+.col-clues {
+  grid-template-columns: var(--tracks);
+  align-items: end;
+  padding: 0 var(--pad);
+  border-width: 0 var(--frame);
+}
+
+.row-clues {
+  grid-template-rows: var(--tracks);
+  padding: var(--pad) 0;
+  border-width: var(--frame) 0;
+}
+
+.clue-col,
+.clue-row {
+  display: flex;
+  font-variant-numeric: tabular-nums;
+}
+
+.clue-col {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  min-height: calc(var(--cell) * 1.9);
+  padding-bottom: 4px;
+}
+
+.clue-row {
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--cell) * 0.16);
+  min-width: var(--gutter);
+  padding-right: 6px;
+}
+
+.clue {
+  font-size: calc(var(--cell) * 0.38);
+  line-height: 1;
+  color: var(--ink);
+}
+
+.clue.done {
+  color: var(--faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: var(--tracks);
+  grid-template-rows: var(--tracks);
+  gap: var(--gap);
+  padding: var(--pad);
+  background: var(--line);
+  border: var(--frame) solid var(--ink);
+  touch-action: none;
+}
+
+.board-row { display: contents; }
+
+.rule {
+  background: var(--ink);
+  pointer-events: none;
+}
+
+/* The hairline gaps either side are kept: they let the divider stay readable
+   where it runs between two filled cells. */
+.rule-v {
+  grid-column: 6;
+  grid-row: 1 / -1;
+}
+
+.rule-h {
+  grid-row: 6;
+  grid-column: 1 / -1;
+}
+
+.cell {
+  position: relative;
+  background: var(--paper);
+  cursor: pointer;
+}
+
+.cell.filled { background: var(--ink); }
+
+.cell.marked {
+  background-image:
+    linear-gradient(45deg,  transparent calc(50% - 1.2px), var(--ink) calc(50% - 1.2px), var(--ink) calc(50% + 1.2px), transparent calc(50% + 1.2px)),
+    linear-gradient(-45deg, transparent calc(50% - 1.2px), var(--ink) calc(50% - 1.2px), var(--ink) calc(50% + 1.2px), transparent calc(50% + 1.2px));
+  background-size: 52% 52%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Cells resolved by the closing reveal pop in one after another. */
+.cell.revealed { animation: cell-appear 0.22s ease both; }
+
+.board.locked .cell { cursor: default; }
+
+.cell:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -4px;
+}
+
+.cell.filled:focus-visible { outline-color: var(--paper); }
+
+/* ------------------------------ animations ------------------------------- */
+
+@keyframes cell-appear {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes board-pulse {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+
+@keyframes cell-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-3px); }
+  45%      { transform: translateX(3px); }
+  70%      { transform: translateX(-2px); }
+  85%      { transform: translateX(2px); }
+}
+
+@keyframes mistake-flash {
+  from { opacity: 0.22; }
+  to   { opacity: 0; }
+}
+
+@keyframes board-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  60%      { transform: translateX(4px); }
+  85%      { transform: translateX(-2px); }
+}
+
+.cell.mistake {
+  animation: cell-shake 0.28s ease;
+  z-index: 1;
+}
+
+.cell.mistake::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  animation: mistake-flash 0.45s ease forwards;
+  pointer-events: none;
+}
+
+.game.shake { animation: board-shake 0.32s ease; }
+
+.game.pulse { animation: board-pulse 0.26s ease; }
+
+/* The reveal itself skips its stagger in script.js; these keep whatever
+   animation remains from moving. */
+@media (prefers-reduced-motion: reduce) {
+  .cell.mistake,
+  .cell.revealed,
+  .game.shake,
+  .game.pulse {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}
+
+/* ------------------------------- messages -------------------------------- */
+
+.message {
+  margin: 0;
+  min-height: 24px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+/* ------------------------------- controls -------------------------------- */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.modes {
+  display: inline-flex;
+  border: 1px solid var(--ink);
+}
+
+.mode-btn {
+  appearance: none;
+  border: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  min-width: 96px;
+  min-height: 44px;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+.mode-btn + .mode-btn { border-left: 1px solid var(--ink); }
+
+.mode-btn.is-active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.mistakes {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #6b6b6b;
+  font-variant-numeric: tabular-nums;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--faint);
+  border-radius: 50%;
+}
+
+.dot.used {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  appearance: none;
+  font: inherit;
+  font-size: 14px;
+  min-height: 44px;
+  padding: 10px 22px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) { border-color: var(--ink); }
+
+.btn:disabled {
+  color: var(--faint);
+  border-color: #e6e6e6;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.btn-primary:hover:not(:disabled) { background: #000; }
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--faint);
+  text-align: center;
+}
+
+@media (hover: none) {
+  .hint { display: none; }
+}
+
+@media (max-width: 360px) {
+  body { padding-left: 8px; padding-right: 8px; }
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
