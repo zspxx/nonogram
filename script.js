@@ -415,13 +415,22 @@ function clueCompletion(clues, filledLine, markedLine) {
     return done;
   }
 
-  const options = arrangements(clues, filledLine.length).filter(function (option) {
-    for (let i = 0; i < option.length; i++) {
-      if (filledLine[i] === 1 && option[i] !== 1) return false;
-      if (marks[i] === 1 && option[i] !== 0) return false;
-    }
-    return true;
-  });
+  function consistentOptions(useMarks) {
+    return arrangements(clues, filledLine.length).filter(function (option) {
+      for (let i = 0; i < option.length; i++) {
+        if (filledLine[i] === 1 && option[i] !== 1) return false;
+        if (useMarks && marks[i] === 1 && option[i] !== 0) return false;
+      }
+      return true;
+    });
+  }
+
+  /* In Easy Mode an X can sit on a cell that is really filled, which can
+     contradict the clue and leave nothing consistent. Fall back to the fills
+     alone so clue feedback keeps working. In Normal Mode every mark is correct,
+     so the first pass always finds options and this changes nothing. */
+  let options = consistentOptions(true);
+  if (!options.length) options = consistentOptions(false);
   if (!options.length) return done;
 
   const spansPerOption = options.map(runSpans);
@@ -489,6 +498,11 @@ const REVEAL_CELL_MS = 220;    /* one cell's reveal animation */
 const GAME_OVER_HOLD_MS = 1600;/* finished loss board stays up this long */
 const RESUMED_HOLD_MS = 1200;  /* same, when a refresh lands on a lost puzzle */
 
+const DIFFICULTY_NOTE = {
+  normal: 'Wrong fills and wrong X marks count as mistakes',
+  easy: 'Only wrong fills count as mistakes'
+};
+
 const state = {
   puzzleNumber: 1,
   salt: 0,
@@ -499,7 +513,8 @@ const state = {
   mistakes: 0,
   status: 'playing', // 'playing' | 'solved' | 'over'
   revealing: false,  // the closing animation is running
-  mode: 'fill',      // 'fill' | 'mark'
+  mode: 'fill',      // 'fill' | 'mark' - which action a press performs
+  difficulty: 'normal', // 'normal' | 'easy' - whether a wrong X costs a mistake
   recent: []
 };
 
@@ -546,6 +561,7 @@ function save() {
       mistakes: state.mistakes,
       status: state.status,
       mode: state.mode,
+      difficulty: state.difficulty,
       recent: state.recent
     }));
   } catch (err) {
@@ -585,15 +601,20 @@ function load() {
   state.mistakes = Number.isInteger(data.mistakes) ? Math.min(Math.max(data.mistakes, 0), MAX_MISTAKES) : 0;
   state.status = data.status === 'solved' || data.status === 'over' ? data.status : 'playing';
   state.mode = data.mode === 'mark' ? 'mark' : 'fill';
+  state.difficulty = data.difficulty === 'easy' ? 'easy' : 'normal';
   state.recent = Array.isArray(data.recent) ? data.recent.filter(function (k) { return typeof k === 'string'; }) : [];
 
-  /* Repair impossible combinations. Normal play can never produce a fill on
-     an empty cell or an X on a filled one, so drop any that were stored. */
+  /* Repair impossible combinations. Play can never produce a fill on an empty
+     cell, so drop any that were stored. An X on a filled cell is impossible in
+     Normal Mode but perfectly legal in Easy Mode, so it is only dropped when
+     the saved difficulty says it could not have been placed. */
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
       const value = state.cells[r][c];
       if (value === FILLED && solution[r][c] === 0) state.cells[r][c] = UNKNOWN;
-      if (value === MARKED && solution[r][c] === 1) state.cells[r][c] = UNKNOWN;
+      if (value === MARKED && solution[r][c] === 1 && state.difficulty !== 'easy') {
+        state.cells[r][c] = UNKNOWN;
+      }
     }
   }
   if (state.mistakes >= MAX_MISTAKES && state.status === 'playing') state.status = 'over';
@@ -759,6 +780,13 @@ function renderStatus() {
   dom.modeFill.setAttribute('aria-pressed', String(state.mode === 'fill'));
   dom.modeMark.setAttribute('aria-pressed', String(state.mode === 'mark'));
 
+  const easy = state.difficulty === 'easy';
+  dom.difficultyNormal.classList.toggle('is-active', !easy);
+  dom.difficultyEasy.classList.toggle('is-active', easy);
+  dom.difficultyNormal.setAttribute('aria-pressed', String(!easy));
+  dom.difficultyEasy.setAttribute('aria-pressed', String(easy));
+  dom.difficultyNote.textContent = DIFFICULTY_NOTE[state.difficulty];
+
   /* "Game Over" lands with the shake; "Solved!" waits for the reveal to
      finish, so the win reads as a completed picture rather than a label. */
   if (state.status === 'solved') {
@@ -837,7 +865,9 @@ function applyOperation(r, c, op) {
 
   if (op === 'mark') {
     if (current === MARKED) return { changed: false, mistake: false };
-    if (truth === 0) {
+    /* Easy Mode lets an X go anywhere without penalty; it is placed exactly
+       like a correct one, so it gives nothing about the solution away. */
+    if (truth === 0 || state.difficulty === 'easy') {
       state.cells[r][c] = MARKED;
       return { changed: true, mistake: false };
     }
@@ -1048,6 +1078,13 @@ function setMode(mode) {
   save();
 }
 
+/* Applies from the next action onwards; mistakes already made are kept. */
+function setDifficulty(difficulty) {
+  state.difficulty = difficulty;
+  renderStatus();
+  save();
+}
+
 /* --------------------------------- input ---------------------------------- */
 
 function cellAt(clientX, clientY) {
@@ -1159,6 +1196,9 @@ function cacheDom() {
   dom.dots = document.getElementById('dots');
   dom.modeFill = document.getElementById('mode-fill');
   dom.modeMark = document.getElementById('mode-mark');
+  dom.difficultyNormal = document.getElementById('difficulty-normal');
+  dom.difficultyEasy = document.getElementById('difficulty-easy');
+  dom.difficultyNote = document.getElementById('difficulty-note');
   dom.reset = document.getElementById('reset');
   dom.next = document.getElementById('next');
 }
@@ -1176,6 +1216,8 @@ function bindEvents() {
 
   dom.modeFill.addEventListener('click', function () { setMode('fill'); });
   dom.modeMark.addEventListener('click', function () { setMode('mark'); });
+  dom.difficultyNormal.addEventListener('click', function () { setDifficulty('normal'); });
+  dom.difficultyEasy.addEventListener('click', function () { setDifficulty('easy'); });
   dom.reset.addEventListener('click', resetPuzzle);
   dom.next.addEventListener('click', nextPuzzle);
 }
